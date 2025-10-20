@@ -9,8 +9,10 @@ export default defineConfig({
     host: true,
     port: 5173,
     allowedHosts: [
-      '8b0da2dc4f9b.ngrok-free.app', // <--- add your ngrok hostname here
-      'localhost'
+      '8b0da2dc4f9b.ngrok-free.app',
+      'localhost',
+      'dwait.local',
+      '0629f13f381f.ngrok-free.app'
     ]
   }
 });

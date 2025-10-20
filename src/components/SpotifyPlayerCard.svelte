@@ -3,7 +3,7 @@
   import { browser } from '$app/environment';
 
   let token: string | null = null;
-  let player: Spotify.Player | null = null;
+  let player: any = null;
   let deviceId: string | null = null;
   let isReady = false;
   export let currentTrack: any = null;
@@ -16,6 +16,8 @@
   let pause: (() => Promise<void>) | null = null;
   let resume: (() => Promise<void>) | null = null;
   let togglePlay: (() => void) | null = null;
+  // Function to perform a user-gesture activation (for Safari)
+  export let activatePlayer: (() => Promise<void>) | null = null;
 
   // Expose playRandomTrack for parent to call
   export async function playRandomTrack() {
@@ -106,33 +108,36 @@
           if (isPlaying) pause();
           else resume();
         };
-
-        // Search for a random track and play it to initialize the player
-        if (token) {
-          // Pick a random search term (single letter)
-          const letters = 'abcdefghijklmnopqrstuvwxyz';
-          const randomLetter = letters[Math.floor(Math.random() * letters.length)];
-          // Search for tracks with the random letter
-          const searchRes = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(randomLetter)}&type=track&limit=50`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const searchData = await searchRes.json();
-          const tracks = searchData.tracks?.items || [];
-          if (tracks.length > 0) {
-            const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
-            const randomUri = randomTrack.uri;
-            await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-              method: 'PUT',
-              body: JSON.stringify({ uris: [randomUri] }),
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
+        // Provide an activation function which performs a user-gesture-initiated initial play.
+        activatePlayer = async () => {
+          if (!token || !deviceId) return;
+          try {
+            const letters = 'abcdefghijklmnopqrstuvwxyz';
+            const randomLetter = letters[Math.floor(Math.random() * letters.length)];
+            const searchRes = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(randomLetter)}&type=track&limit=50`, {
+              headers: { 'Authorization': `Bearer ${token}` }
             });
-          } else {
-            console.error('No tracks found for random search');
+            const searchData = await searchRes.json();
+            const tracks = searchData.tracks?.items || [];
+            if (tracks.length > 0) {
+              const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+              const randomUri = randomTrack.uri;
+              await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ uris: [randomUri] }),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+              });
+              isPlaying = true;
+            } else {
+              console.error('No tracks found for random search');
+            }
+          } catch (err) {
+            console.error('Activation error', err);
           }
-        }
+        };
       });
 
       let lastLoggedTrackId: string | null = null;
@@ -224,7 +229,16 @@
       <p>{currentTrack.artists[0].name}</p>
     </div>
     <div class="controls">
-      <button on:click={togglePlay}>{isPlaying ? 'Pause' : 'Play'}</button>
+      <button on:click={async () => {
+        // If player needs activation (Safari), call activatePlayer on first gesture
+        if (!isPlaying && activatePlayer) {
+          await activatePlayer();
+          // Clear activatePlayer so future clicks just toggle
+          activatePlayer = null;
+          return;
+        }
+        togglePlay?.();
+      }}>{isPlaying ? 'Pause' : 'Play'}</button>
     </div>
   {:else}
     <p>Loading track...</p>
