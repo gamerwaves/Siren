@@ -18,7 +18,7 @@
         response_type: 'code',
         client_id: clientId,
         scope: scopes,
-        redirect_uri: 'http://127.0.0.1:5173/callback',
+        redirect_uri: 'https://siren-alpha.vercel.app/callback',
         state
       }).toString();
     window.location.href = url;
