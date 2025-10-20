@@ -11,6 +11,8 @@
   let isPlaying = false;
   let premiumError = false;
 
+  import { fetchWithAuth, redirectToLogin } from '$lib/fetchWithAuth';
+
   // Will define after SDK ready
   let play: ((uri: string) => Promise<void>) | null = null;
   let pause: (() => Promise<void>) | null = null;
@@ -22,7 +24,7 @@
     if (!token || !deviceId) return;
     const letters = 'abcdefghijklmnopqrstuvwxyz';
     const randomLetter = letters[Math.floor(Math.random() * letters.length)];
-    const searchRes = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(randomLetter)}&type=track&limit=50`, {
+    const searchRes = await fetchWithAuth(`https://api.spotify.com/v1/search?q=${encodeURIComponent(randomLetter)}&type=track&limit=50`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const searchData = await searchRes.json();
@@ -30,7 +32,7 @@
     if (tracks.length > 0) {
       const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
       const randomUri = randomTrack.uri;
-      await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+      await fetchWithAuth(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
         method: 'PUT',
         body: JSON.stringify({ uris: [randomUri] }),
         headers: {
@@ -81,7 +83,7 @@
         // Initialize playback functions
         play = async (uri: string) => {
           if (!deviceId || !token) return;
-          await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+          const res = await fetchWithAuth(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
             method: 'PUT',
             body: JSON.stringify({ uris: [uri] }),
             headers: {
@@ -89,25 +91,25 @@
               'Authorization': `Bearer ${token}`
             },
           });
-          isPlaying = true;
+          if (res.ok) isPlaying = true;
         };
 
         pause = async () => {
           if (!token) return;
-          await fetch(`https://api.spotify.com/v1/me/player/pause`, {
+          const res = await fetchWithAuth(`https://api.spotify.com/v1/me/player/pause`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          isPlaying = false;
+          if (res.ok) isPlaying = false;
         };
 
         resume = async () => {
           if (!token) return;
-          await fetch(`https://api.spotify.com/v1/me/player/play`, {
+          const res = await fetchWithAuth(`https://api.spotify.com/v1/me/player/play`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          isPlaying = true;
+          if (res.ok) isPlaying = true;
         };
 
         togglePlay = () => {
@@ -122,7 +124,7 @@
           const letters = 'abcdefghijklmnopqrstuvwxyz';
           const randomLetter = letters[Math.floor(Math.random() * letters.length)];
           // Search for tracks with the random letter
-          const searchRes = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(randomLetter)}&type=track&limit=50`, {
+          const searchRes = await fetchWithAuth(`https://api.spotify.com/v1/search?q=${encodeURIComponent(randomLetter)}&type=track&limit=50`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const searchData = await searchRes.json();
@@ -130,7 +132,7 @@
           if (tracks.length > 0) {
             const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
             const randomUri = randomTrack.uri;
-            await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+            await fetchWithAuth(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
               method: 'PUT',
               body: JSON.stringify({ uris: [randomUri] }),
               headers: {
@@ -159,7 +161,13 @@
       });
 
       player.addListener('initialization_error', ({ message }: any) => console.error('Init error:', message));
-      player.addListener('authentication_error', ({ message }: any) => console.error('Auth error:', message));
+      player.addListener('authentication_error', ({ message }: any) => {
+        console.error('Auth error:', message);
+        // If authentication failed, redirect to login so the user can re-authenticate
+        if (typeof message === 'string' && message.toLowerCase().includes('authentication failed')) {
+          redirectToLogin();
+        }
+      });
       player.addListener('account_error', ({ message }: any) => {
         console.error('Account error:', message);
         if (typeof message === 'string' && message.includes('restricted to premium users')) {

@@ -17,6 +17,7 @@
   };
   let playerRef: any = null;
   let currentTrack: any = null;
+  import { fetchWithAuth } from '$lib/fetchWithAuth';
 
   // Animation state for like/dislike tilt
   let animClass = '';
@@ -111,20 +112,20 @@
     const trackId = currentTrack?.id;
     if (!token || !trackId) return;
     console.log('Attempting to like track:', currentTrack);
-    await fetch('https://api.spotify.com/v1/me/tracks', {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ ids: [trackId] })
-    }).then(res => {
+    try {
+      const res = await fetchWithAuth('https://api.spotify.com/v1/me/tracks', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [trackId] })
+      });
       if (res.ok) {
         console.log(`Liked track: ${currentTrack?.name} (${trackId})`);
       } else {
         console.warn('Failed to save track:', trackId);
       }
-    });
+    } catch (e) {
+      console.warn('Failed to save track', e);
+    }
     // Play a random song after liking
     await playerRef?.playRandomTrack?.();
   }
@@ -135,20 +136,20 @@
     const trackId = currentTrack?.id;
     if (!token || !trackId) return;
     console.log('Attempting to dislike track:', currentTrack);
-    await fetch('https://api.spotify.com/v1/me/tracks', {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ ids: [trackId] })
-    }).then(res => {
+    try {
+      const res = await fetchWithAuth('https://api.spotify.com/v1/me/tracks', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [trackId] })
+      });
       if (res.ok) {
         console.log(`Disliked track: ${currentTrack?.name} (${trackId})`);
       } else {
         console.warn('Failed to remove track:', trackId);
       }
-    });
+    } catch (e) {
+      console.warn('Failed to remove track', e);
+    }
     // Play a random song after disliking
     await playerRef?.playRandomTrack?.();
   }
