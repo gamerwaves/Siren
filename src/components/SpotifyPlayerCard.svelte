@@ -40,7 +40,16 @@
           'Authorization': `Bearer ${token}`
         },
       });
-      await pause?.();
+        // Refresh local player state after issuing play
+        try {
+          const state = await player?.getCurrentState?.();
+          if (state) {
+            currentTrack = state.track_window.current_track;
+            isPlaying = !state.paused;
+          }
+        } catch (err) {
+          console.warn('Could not get player state after play', err);
+        }
     } else {
       console.error('No tracks found for random search');
     }
@@ -130,7 +139,17 @@
                   'Authorization': `Bearer ${token}`
                 },
               });
-              isPlaying = true;
+                // Refresh local player state after activation
+                isPlaying = true;
+                try {
+                  const state = await player?.getCurrentState?.();
+                  if (state) {
+                    currentTrack = state.track_window.current_track;
+                    isPlaying = !state.paused;
+                  }
+                } catch (err) {
+                  console.warn('Could not get player state after activation', err);
+                }
             } else {
               console.error('No tracks found for random search');
             }
@@ -239,6 +258,18 @@
         }
         togglePlay?.();
       }}>{isPlaying ? 'Pause' : 'Play'}</button>
+    </div>
+  {:else if isReady}
+    <div>
+      <p>No track loaded yet.</p>
+      <div class="controls">
+        <button on:click={async () => {
+          if (activatePlayer) {
+            await activatePlayer();
+            activatePlayer = null;
+          }
+        }}>Start playback</button>
+      </div>
     </div>
   {:else}
     <p>Loading track...</p>
