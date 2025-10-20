@@ -38,7 +38,16 @@
           'Authorization': `Bearer ${token}`
         },
       });
-      await pause?.();
+      // Refresh local player state so UI updates (do not pause)
+      try {
+        const state = await player?.getCurrentState?.();
+        if (state) {
+          currentTrack = state.track_window.current_track;
+          isPlaying = !state.paused;
+        }
+      } catch (err) {
+        console.warn('Could not get player state after play', err);
+      }
     } else {
       console.error('No tracks found for random search');
     }

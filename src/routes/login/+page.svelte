@@ -13,12 +13,13 @@
 
   function login() {
     const state = crypto.randomUUID(); // optional, can store in cookie for CSRF protection
+    const redirectUri = (import.meta.env.VITE_SPOTIFY_REDIRECT_URI as string) || 'https://siren-alpha.vercel.app/callback';
     const url = `https://accounts.spotify.com/authorize?` +
       new URLSearchParams({
         response_type: 'code',
         client_id: clientId,
         scope: scopes,
-        redirect_uri: 'https://siren-alpha.vercel.app/callback',
+        redirect_uri: redirectUri,
         state
       }).toString();
     window.location.href = url;
