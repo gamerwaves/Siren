@@ -101,12 +101,12 @@
     }
   };
   // Save current track to user's library
-  function saveCurrentTrack() {
+  async function saveCurrentTrack() {
     const token = localStorage.getItem('spotify_token');
     const trackId = currentTrack?.id;
     if (!token || !trackId) return;
     console.log('Attempting to like track:', currentTrack);
-    fetch('https://api.spotify.com/v1/me/tracks', {
+    await fetch('https://api.spotify.com/v1/me/tracks', {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -120,15 +120,17 @@
         console.warn('Failed to save track:', trackId);
       }
     });
+    // Play a random song after liking
+    await playerRef?.playRandomTrack?.();
   }
 
   // Remove current track from user's library
-  function removeCurrentTrack() {
+  async function removeCurrentTrack() {
     const token = localStorage.getItem('spotify_token');
     const trackId = currentTrack?.id;
     if (!token || !trackId) return;
     console.log('Attempting to dislike track:', currentTrack);
-    fetch('https://api.spotify.com/v1/me/tracks', {
+    await fetch('https://api.spotify.com/v1/me/tracks', {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -142,6 +144,8 @@
         console.warn('Failed to remove track:', trackId);
       }
     });
+    // Play a random song after disliking
+    await playerRef?.playRandomTrack?.();
   }
 </script>
 
@@ -185,28 +189,7 @@
     z-index: 2000;
     cursor: pointer;
   }
-    .reload-player-btn {
-      position: absolute;
-      top: 24px;
-      left: 24px;
-      background: #fff;
-      color: #222;
-      border: 2px solid #eee;
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-      cursor: pointer;
-      z-index: 2100;
-      transition: background 0.2s;
-    }
-    .reload-player-btn:hover {
-      background: #f0f0f0;
-    }
+
 
   .user-avatar {
     width: 56px;
@@ -273,15 +256,39 @@
     background: #fff;
     border: 2px solid #eee;
     border-radius: 50%;
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+    max-width: 56px;
+    max-height: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.18s, box-shadow 0.18s, border-color 0.18s;
     padding: 0;
+    outline: none;
+  }
+  .thumb-btn svg {
+    width: 28px;
+    height: 28px;
+    display: block;
+    margin: 0 auto;
+  }
+  .thumb-btn.left svg {
+    stroke: #1db954;
+    fill: #1db95422;
+  }
+  .thumb-btn.right svg {
+    stroke: #e74c3c;
+    fill: #e74c3c22;
+  }
+  .thumb-btn:hover, .thumb-btn:focus {
+    background: #f6f6f6;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.16);
+    border-color: #ccc;
   }
   .thumb-btn.left svg {
     stroke: #1db954;
@@ -296,9 +303,6 @@
 
 
 <main>
-    <button class="reload-player-btn" type="button" title="Play Random Song" on:click={() => playerRef?.playRandomTrack()}>
-      &#x21bb;
-    </button>
   {#if currentUser}
     <button
       type="button"
